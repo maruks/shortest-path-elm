@@ -181,7 +181,7 @@ getCost cells ( ex, ey ) p1 ( x, y ) =
         d =
             dx * dx + dy * dy |> toFloat |> sqrt |> round
     in
-    1 + height // 10
+    1 + height // 10 + d // 10
 
 
 connectedPoints : CellsDict -> Point -> List Point
@@ -237,7 +237,15 @@ initCells hs width height =
             concatMap (\x -> map (\y -> ( x, y )) ys) xs
 
         kvs =
-            map2 (,) points <| map (\h -> if h<180 then 0 else h) hs
+            map2 (,) points <|
+                map
+                    (\h ->
+                        if h < 180 then
+                            0
+                        else
+                            h
+                    )
+                    hs
     in
     fromList kvs
 
@@ -330,41 +338,14 @@ subscriptions _ =
 -- VIEW
 
 
-renderGrid : Int -> Int -> Int -> List (Svg msg)
-renderGrid width height cellSize =
-    let
-        xs =
-            range 0 width |> map (\x -> x * cellSize)
-
-        ys =
-            range 0 height |> map (\x -> x * cellSize)
-
-        ws =
-            width * cellSize |> toString
-
-        hs =
-            height * cellSize |> toString
-
-        lineStyle =
-            "stroke:#999999;stroke-width:1"
-
-        xls =
-            List.map (\x -> line [ x1 (toString x), y1 "0", x2 (toString x), y2 hs, style lineStyle ] []) xs
-
-        yls =
-            List.map (\y -> line [ x1 "0", y1 (toString y), x2 ws, y2 (toString y), style lineStyle ] []) ys
-    in
-    xls ++ yls
-
-
 fillColor : Int -> String
 fillColor h =
-    "fill:rgb(255," ++ toString (229 - round (0.3764 * toFloat h)) ++ "," ++ toString (200 - round (0.7843 * toFloat h)) ++ ")"
+    "stroke: #999999; stroke-opacity:0.3; stroke-width: 1; fill:rgb(255," ++ toString (229 - round (0.3764 * toFloat h)) ++ "," ++ toString (200 - round (0.7843 * toFloat h)) ++ ")"
 
 
 renderCells : Int -> CellsDict -> List (Svg Msg)
 renderCells size =
-    toList >> List.map (\( ( x, y ), h ) -> rect [ SelectCell ( x, y ) |> onClick, Svg.Attributes.x (toString (x * size + 1)), Svg.Attributes.y (toString (y * size + 1)), Svg.Attributes.width (toString (size - 1)), Svg.Attributes.height (toString (size - 1)), style (fillColor h) ] [])
+    toList >> List.map (\( ( x, y ), h ) -> rect [ SelectCell ( x, y ) |> onClick, Svg.Attributes.x (toString (x * size + 1)), Svg.Attributes.y (toString (y * size + 1)), Svg.Attributes.width <| toString size, Svg.Attributes.height <| toString size, style (fillColor h) ] [])
 
 
 renderPath : Int -> Path -> List (Svg Msg)
@@ -376,10 +357,11 @@ renderPath cellSize path =
             pointsStr =
                 map (\( x, y ) -> toString (x * cellSize + cellSize // 2) ++ "," ++ toString (y * cellSize + cellSize // 2)) path |> join " "
 
-            width = Basics.max 1 <| cellSize // 7
+            width =
+                Basics.max 1 <| cellSize // 7
 
             lines =
-                Svg.polyline [ Svg.Attributes.style <| "fill:none;stroke:black;stroke-width:" ++ (toString width) , Svg.Attributes.points pointsStr ] []
+                Svg.polyline [ Svg.Attributes.style <| "fill:none;stroke:black;stroke-width:" ++ toString width, Svg.Attributes.points pointsStr ] []
         in
         singleton lines
 
@@ -390,9 +372,6 @@ view { grid, cells, path } =
         { width, height, cellSize } =
             grid
 
-        g =
-            renderGrid width height cellSize
-
         c =
             renderCells cellSize cells
 
@@ -401,4 +380,4 @@ view { grid, cells, path } =
     in
     svg
         [ Svg.Attributes.width (width * cellSize |> toString), Svg.Attributes.height (height * cellSize |> toString) ]
-        (c ++ g ++ p)
+        (c ++ p)
